@@ -23,14 +23,14 @@ func (s *BinaryStream) ReadNullTerminatedString() (string, error) {
 		return "", fmt.Errorf("null terminator not found")
 	}
 	str := string(s.buf[s.i : s.i+j])
-	s.i = s.i + j
+	s.i += j + 1
 	return str, nil
 }
 
 func (s *BinaryStream) ReadUint64() (uint64, error) {
 	var val uint64
 	buf := bytes.NewReader(s.buf[s.i:])
-	err := binary.Read(buf, binary.LittleEndian, &val)
+	err := binary.Read(buf, s.byteOrder, &val)
 	if err != nil {
 		return 0, err
 	}
