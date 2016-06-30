@@ -38,6 +38,17 @@ func (s *BinaryStream) ReadUint64() (uint64, error) {
 	return val, nil
 }
 
+func (s *BinaryStream) ReadUint32() (uint32, error) {
+	var val uint32
+	buf := bytes.NewReader(s.buf[s.i:])
+	err := binary.Read(buf, s.byteOrder, &val)
+	if err != nil {
+		return 0, err
+	}
+	s.i += 4
+	return val, nil
+}
+
 func (s *BinaryStream) Skip(n int) error {
 	s.i += n
 	if s.i > len(s.buf) {
