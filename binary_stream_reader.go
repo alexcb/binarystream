@@ -44,16 +44,27 @@ func (s *BinaryStream) ensureData(n int) error {
 }
 
 func (s *BinaryStream) ReadNullTerminatedString() (string, error) {
+	str, err := s.PeekNullTerminatedString()
+	if err != nil {
+		return "", err
+	}
+	n := len(str) + 1
+	s.buf = s.buf[n:]
+	return str, nil
+}
+
+func (s *BinaryStream) PeekNullTerminatedString() (string, error) {
 	var b []byte
+	i := 0
 	for {
-		ch, err := s.ReadUint8()
+		err := s.ensureData(i + 1)
 		if err != nil {
 			return "", err
 		}
-		if ch == 0 {
+		if s.buf[i] == 0x00 {
 			break
 		}
-		b = append(b, ch)
+		b = append(b, s.buf[i])
 	}
 	return string(b), nil
 }
@@ -71,10 +82,15 @@ func (s *BinaryStream) ReadUint8PrefixedString() (string, error) {
 }
 
 func (s *BinaryStream) ReadUint16PrefixedString() (string, error) {
-	n, err := s.ReadUint16()
+	n, err := s.PeekUint16()
 	if err != nil {
 		return "", err
 	}
+	err = s.ensureData(2 + int(n))
+	if err != nil {
+		return "", err
+	}
+	s.buf = s.buf[2:]
 	b, err := s.ReadBytes(int(n))
 	if err != nil {
 		return "", err
@@ -83,10 +99,15 @@ func (s *BinaryStream) ReadUint16PrefixedString() (string, error) {
 }
 
 func (s *BinaryStream) ReadUint32PrefixedString() (string, error) {
-	n, err := s.ReadUint32()
+	n, err := s.PeekUint32()
 	if err != nil {
 		return "", err
 	}
+	err = s.ensureData(4 + int(n))
+	if err != nil {
+		return "", err
+	}
+	s.buf = s.buf[4:]
 	b, err := s.ReadBytes(int(n))
 	if err != nil {
 		return "", err
@@ -95,10 +116,15 @@ func (s *BinaryStream) ReadUint32PrefixedString() (string, error) {
 }
 
 func (s *BinaryStream) ReadUint64PrefixedString() (string, error) {
-	n, err := s.ReadUint64()
+	n, err := s.PeekUint64()
 	if err != nil {
 		return "", err
 	}
+	err = s.ensureData(8 + int(n))
+	if err != nil {
+		return "", err
+	}
+	s.buf = s.buf[8:]
 	b, err := s.ReadBytes(int(n))
 	if err != nil {
 		return "", err
@@ -117,6 +143,15 @@ func (s *BinaryStream) ReadBytes(n int) ([]byte, error) {
 }
 
 func (s *BinaryStream) ReadUint64() (uint64, error) {
+	x, err := s.PeekUint64()
+	if err != nil {
+		return 0, err
+	}
+	s.buf = s.buf[8:]
+	return x, nil
+}
+
+func (s *BinaryStream) PeekUint64() (uint64, error) {
 	err := s.ensureData(8)
 	if err != nil {
 		return 0, err
@@ -126,11 +161,19 @@ func (s *BinaryStream) ReadUint64() (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	s.buf = s.buf[8:]
 	return val, nil
 }
 
 func (s *BinaryStream) ReadUint32() (uint32, error) {
+	x, err := s.PeekUint32()
+	if err != nil {
+		return 0, err
+	}
+	s.buf = s.buf[4:]
+	return x, nil
+}
+
+func (s *BinaryStream) PeekUint32() (uint32, error) {
 	err := s.ensureData(4)
 	if err != nil {
 		return 0, err
@@ -140,11 +183,19 @@ func (s *BinaryStream) ReadUint32() (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	s.buf = s.buf[4:]
 	return val, nil
 }
 
 func (s *BinaryStream) ReadUint16() (uint16, error) {
+	x, err := s.PeekUint16()
+	if err != nil {
+		return 0, err
+	}
+	s.buf = s.buf[2:]
+	return x, nil
+}
+
+func (s *BinaryStream) PeekUint16() (uint16, error) {
 	err := s.ensureData(2)
 	if err != nil {
 		return 0, err
@@ -154,11 +205,19 @@ func (s *BinaryStream) ReadUint16() (uint16, error) {
 	if err != nil {
 		return 0, err
 	}
-	s.buf = s.buf[2:]
 	return val, nil
 }
 
 func (s *BinaryStream) ReadUint8() (uint8, error) {
+	x, err := s.PeekUint8()
+	if err != nil {
+		return 0, err
+	}
+	s.buf = s.buf[1:]
+	return x, nil
+}
+
+func (s *BinaryStream) PeekUint8() (uint8, error) {
 	err := s.ensureData(1)
 	if err != nil {
 		return 0, err
@@ -168,7 +227,6 @@ func (s *BinaryStream) ReadUint8() (uint8, error) {
 	if err != nil {
 		return 0, err
 	}
-	s.buf = s.buf[1:]
 	return val, nil
 }
 

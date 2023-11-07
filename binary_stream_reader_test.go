@@ -1,6 +1,7 @@
 package binarystream_test
 
 import (
+	"bytes"
 	"encoding/binary"
 	"testing"
 
@@ -150,4 +151,31 @@ func TestReadPrefixedString(t *testing.T) {
 
 	_, err = bsr.ReadUint8PrefixedString()
 	Error(t, err, binarystream.ErrBufferUnderflow)
+}
+
+func TestUnderrunIsRecoverable(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	bsr := binarystream.NewReader(buf, binary.LittleEndian)
+
+	_, err := bsr.ReadUint16PrefixedString()
+	Error(t, err, binarystream.ErrBufferUnderflow)
+
+	_, err = buf.Write([]byte{0x03, 0x00}) // 3 chars
+	NoError(t, err)
+
+	_, err = bsr.ReadUint16PrefixedString()
+	Error(t, err, binarystream.ErrBufferUnderflow)
+
+	_, err = buf.Write([]byte{0x61}) // a
+	NoError(t, err)
+
+	_, err = bsr.ReadUint16PrefixedString()
+	Error(t, err, binarystream.ErrBufferUnderflow)
+
+	_, err = buf.Write([]byte{0x62, 0x63}) // b c
+	NoError(t, err)
+
+	s, err := bsr.ReadUint16PrefixedString()
+	NoError(t, err)
+	Equal(t, s, "abc")
 }
